@@ -16,6 +16,9 @@
 
 package com.example.jetcaster.ui.player
 
+import android.content.Context
+import android.content.Intent
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.basicMarquee
@@ -41,18 +44,23 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonColors
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Colors
 import androidx.compose.material.ContentAlpha
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LocalContentAlpha
 import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Slider
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Forward30
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlaylistAdd
@@ -66,6 +74,8 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,6 +98,8 @@ import androidx.window.layout.FoldingFeature
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.jetcaster.R
+import com.example.jetcaster.services.DownloadService
+import com.example.jetcaster.services.MusicPlayerService
 import com.example.jetcaster.ui.theme.JetcasterTheme
 import com.example.jetcaster.ui.theme.MinContrastOfPrimaryVsSurface
 import com.example.jetcaster.util.DynamicThemePrimaryColorsFromImage
@@ -110,10 +122,11 @@ fun PlayerScreen(
     viewModel: PlayerViewModel,
     windowSizeClass: WindowSizeClass,
     displayFeatures: List<DisplayFeature>,
-    onBackPress: () -> Unit
+    onBackPress: () -> Unit,
+    context: Context
 ) {
     val uiState = viewModel.uiState
-    PlayerScreen(uiState, windowSizeClass, displayFeatures, onBackPress)
+    PlayerScreen(uiState, windowSizeClass, displayFeatures, onBackPress,context=context)
 }
 
 /**
@@ -125,11 +138,12 @@ private fun PlayerScreen(
     windowSizeClass: WindowSizeClass,
     displayFeatures: List<DisplayFeature>,
     onBackPress: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context
 ) {
     Surface(modifier) {
         if (uiState.podcastName.isNotEmpty()) {
-            PlayerContent(uiState, windowSizeClass, displayFeatures, onBackPress)
+            PlayerContent(uiState, windowSizeClass, displayFeatures, onBackPress,context=context)
         } else {
             FullScreenLoading()
         }
@@ -142,7 +156,8 @@ fun PlayerContent(
     windowSizeClass: WindowSizeClass,
     displayFeatures: List<DisplayFeature>,
     onBackPress: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context
 ) {
     PlayerDynamicTheme(uiState.podcastImageUrl) {
         val foldingFeature = displayFeatures.filterIsInstance<FoldingFeature>().firstOrNull()
@@ -171,7 +186,7 @@ fun PlayerContent(
                         PlayerContentTableTopTop(uiState = uiState)
                     },
                     second = {
-                        PlayerContentTableTopBottom(uiState = uiState, onBackPress = onBackPress)
+                        PlayerContentTableTopBottom(context=context,uiState = uiState, onBackPress = onBackPress)
                     },
                     strategy = VerticalTwoPaneStrategy(splitFraction = 0.5f),
                     displayFeatures = displayFeatures,
@@ -195,7 +210,7 @@ fun PlayerContent(
                             PlayerContentBookStart(uiState = uiState)
                         },
                         second = {
-                            PlayerContentBookEnd(uiState = uiState)
+                            PlayerContentBookEnd(context=context,uiState = uiState)
                         },
                         strategy = HorizontalTwoPaneStrategy(splitFraction = 0.5f),
                         displayFeatures = displayFeatures
@@ -203,7 +218,7 @@ fun PlayerContent(
                 }
             }
         } else {
-            PlayerContentRegular(uiState, onBackPress, modifier)
+            PlayerContentRegular(uiState, onBackPress, modifier,context)
         }
     }
 }
@@ -215,7 +230,8 @@ fun PlayerContent(
 private fun PlayerContentRegular(
     uiState: PlayerUiState,
     onBackPress: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context
 ) {
     Column(
         modifier = modifier
@@ -246,7 +262,7 @@ private fun PlayerContentRegular(
                 modifier = Modifier.weight(10f)
             ) {
                 PlayerSlider(uiState.duration)
-                PlayerButtons(Modifier.padding(vertical = 8.dp))
+                PlayerButtons(context,Modifier.padding(vertical = 8.dp))
             }
             Spacer(modifier = Modifier.weight(1f))
         }
@@ -289,7 +305,8 @@ private fun PlayerContentTableTopTop(
 private fun PlayerContentTableTopBottom(
     uiState: PlayerUiState,
     onBackPress: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context
 ) {
     // Content for the table part of the screen
     Column(
@@ -313,7 +330,7 @@ private fun PlayerContentTableTopBottom(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.weight(10f)
         ) {
-            PlayerButtons(playerButtonSize = 92.dp, modifier = Modifier.padding(top = 8.dp))
+            PlayerButtons(context,playerButtonSize = 92.dp, modifier = Modifier.padding(top = 8.dp))
             PlayerSlider(uiState.duration)
         }
     }
@@ -354,7 +371,8 @@ private fun PlayerContentBookStart(
 @Composable
 private fun PlayerContentBookEnd(
     uiState: PlayerUiState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context
 ) {
     Column(
         modifier = modifier
@@ -370,7 +388,7 @@ private fun PlayerContentBookEnd(
                 .weight(1f)
         )
         PlayerSlider(uiState.duration)
-        PlayerButtons(Modifier.padding(vertical = 8.dp))
+        PlayerButtons(context,Modifier.padding(vertical = 8.dp))
     }
 }
 
@@ -491,11 +509,17 @@ private fun PlayerSlider(episodeDuration: Duration?) {
 }
 
 @Composable
-private fun PlayerButtons(
+private fun PlayerButtons(context: Context,
     modifier: Modifier = Modifier,
     playerButtonSize: Dp = 72.dp,
     sideButtonSize: Dp = 48.dp
 ) {
+    val serviceStatus = remember {
+        mutableStateOf(false)
+    }
+    val buttonValue = remember {
+        mutableStateOf("Start Service")
+    }
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -504,44 +528,40 @@ private fun PlayerButtons(
         val buttonsModifier = Modifier
             .size(sideButtonSize)
             .semantics { role = Role.Button }
+        OutlinedButton(onClick = {
+            if (serviceStatus.value) {
+                serviceStatus.value = !serviceStatus.value
+                buttonValue.value = "Start Service"
+                context.stopService(Intent(context, MusicPlayerService::class.java))
+            } else {
+                serviceStatus.value = !serviceStatus.value
+                buttonValue.value = "Stop Service"
+                context.startService(Intent(context, MusicPlayerService::class.java))
+            }
 
-        Image(
-            imageVector = Icons.Filled.SkipPrevious,
-            contentDescription = stringResource(R.string.cd_skip_previous),
-            contentScale = ContentScale.Fit,
-            colorFilter = ColorFilter.tint(LocalContentColor.current),
-            modifier = buttonsModifier
+        }) {
+            Image(
+                imageVector = Icons.Rounded.PlayCircleFilled,
+                contentDescription = stringResource(R.string.cd_play),
+                contentScale = ContentScale.Fit,
+                colorFilter = ColorFilter.tint(LocalContentColor.current),
+                modifier = Modifier
+                    .size(playerButtonSize)
+                    .semantics { role = Role.Button }
+            )
+        }
+        OutlinedButton(onClick = {
+            context.startService(Intent(context,DownloadService::class.java))
+        }) {
+
+         Image (
+                imageVector = Icons.Filled.Download,
+        contentDescription = stringResource(R.string.cd_forward30),
+        contentScale = ContentScale.Fit,
+        colorFilter = ColorFilter.tint(LocalContentColor.current),
+        modifier = buttonsModifier
         )
-        Image(
-            imageVector = Icons.Filled.Replay10,
-            contentDescription = stringResource(R.string.cd_reply10),
-            contentScale = ContentScale.Fit,
-            colorFilter = ColorFilter.tint(LocalContentColor.current),
-            modifier = buttonsModifier
-        )
-        Image(
-            imageVector = Icons.Rounded.PlayCircleFilled,
-            contentDescription = stringResource(R.string.cd_play),
-            contentScale = ContentScale.Fit,
-            colorFilter = ColorFilter.tint(LocalContentColor.current),
-            modifier = Modifier
-                .size(playerButtonSize)
-                .semantics { role = Role.Button }
-        )
-        Image(
-            imageVector = Icons.Filled.Forward30,
-            contentDescription = stringResource(R.string.cd_forward30),
-            contentScale = ContentScale.Fit,
-            colorFilter = ColorFilter.tint(LocalContentColor.current),
-            modifier = buttonsModifier
-        )
-        Image(
-            imageVector = Icons.Filled.SkipNext,
-            contentDescription = stringResource(R.string.cd_skip_next),
-            contentScale = ContentScale.Fit,
-            colorFilter = ColorFilter.tint(LocalContentColor.current),
-            modifier = buttonsModifier
-        )
+    }
     }
 }
 
@@ -595,33 +615,6 @@ fun TopAppBarPreview() {
     }
 }
 
-@Preview
-@Composable
-fun PlayerButtonsPreview() {
-    JetcasterTheme {
-        PlayerButtons()
-    }
-}
 
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
-@Preview(device = Devices.PHONE)
-@Preview(device = Devices.FOLDABLE)
-@Preview(device = Devices.TABLET)
-@Preview(device = Devices.DESKTOP)
-@Composable
-fun PlayerScreenPreview() {
-    JetcasterTheme {
-        BoxWithConstraints {
-            PlayerScreen(
-                PlayerUiState(
-                    title = "Title",
-                    duration = Duration.ofHours(2),
-                    podcastName = "Podcast"
-                ),
-                displayFeatures = emptyList(),
-                windowSizeClass = WindowSizeClass.calculateFromSize(DpSize(maxWidth, maxHeight)),
-                onBackPress = { }
-            )
-        }
-    }
-}
+
+

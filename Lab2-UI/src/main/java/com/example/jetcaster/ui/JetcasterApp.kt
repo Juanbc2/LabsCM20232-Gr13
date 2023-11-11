@@ -16,6 +16,7 @@
 
 package com.example.jetcaster.ui
 
+import android.content.Context
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
@@ -35,7 +36,8 @@ import com.example.jetcaster.ui.player.PlayerViewModel
 fun JetcasterApp(
     windowSizeClass: WindowSizeClass,
     displayFeatures: List<DisplayFeature>,
-    appState: JetcasterAppState = rememberJetcasterAppState()
+    appState: JetcasterAppState = rememberJetcasterAppState(),
+    context: Context
 ) {
     if (appState.isOnline) {
         NavHost(
@@ -60,7 +62,7 @@ fun JetcasterApp(
                     playerViewModel,
                     windowSizeClass,
                     displayFeatures,
-                    onBackPress = appState::navigateBack
+                    onBackPress = appState::navigateBack,context
                 )
             }
         }

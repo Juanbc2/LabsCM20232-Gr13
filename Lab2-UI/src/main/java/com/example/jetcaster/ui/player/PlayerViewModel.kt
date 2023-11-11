@@ -40,7 +40,8 @@ data class PlayerUiState(
     val podcastName: String = "",
     val author: String = "",
     val summary: String = "",
-    val podcastImageUrl: String = ""
+    val podcastImageUrl: String = "",
+    val podcastUri: String = ""
 )
 
 /**
@@ -68,7 +69,8 @@ class PlayerViewModel(
                 duration = episode.duration,
                 podcastName = podcast.title,
                 summary = episode.summary ?: "",
-                podcastImageUrl = podcast.imageUrl ?: ""
+                podcastImageUrl = podcast.imageUrl ?: "",
+                podcastUri = podcast.uri
             )
         }
     }
